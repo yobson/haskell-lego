@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralisedNewtypeDeriving, OverloadedStrings #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving, OverloadedStrings, FlexibleInstances, MultiParamTypeClasses, UndecidableInstances #-}
 module Robotics.Spike 
 ( SpikeError
 , SpikeT(..)
@@ -8,6 +8,7 @@ module Robotics.Spike
 , motorSetPwm
 , motorSetSpeed
 , motorSetAngle
+, motorBrake
 , eyesSetLeds
 , eyesEnableLeds
 , eyesGetDistance
@@ -23,6 +24,8 @@ module Robotics.Spike
 
 import Control.Monad.Except
 import Control.Monad.Reader
+import Control.Monad.State
+import Control.Monad.Trans
 import Control.Monad.IO.Class
 import qualified System.Hardware.Serialport as P
 import Control.Exception
@@ -48,9 +51,18 @@ instance (MonadIO m) => MonadIO (SpikeT m) where
       Left e  -> return $ Left $ displayException (e :: IOException)
       Right x -> return $ Right x
 
+instance MonadTrans SpikeT where
+  lift = SpikeT . lift . lift
+
+instance (MonadState s m) => MonadState s (SpikeT m) where
+  get = lift get
+  put = lift . put
+  state = lift . state
+
 runSpike :: (MonadIO m) => SpikeT m a -> P.SerialPort -> m (Either SpikeError a)
 runSpike (SpikeT s) port = do
   liftIO $ P.send port "\3"
+  liftIO $ threadDelay (1000000)
   liftIO $ P.recv port 2048
   runExceptT $ runReaderT s port
 
@@ -69,6 +81,9 @@ motorSetSpeed port speed = ask >>= \s -> R.motorRunAtSpeed s port speed
 
 motorSetAngle :: (MonadIO m) => Port -> Int -> Int -> SpikeT m ()
 motorSetAngle port angle speed = ask >>= \s -> R.motorRunToPos s port angle speed
+
+motorBrake :: (MonadIO m) => Port -> SpikeT m ()
+motorBrake port = ask >>= \s -> R.motorBrake s port
 
 eyesSetLeds :: (MonadIO m) => Port -> (Word8,Word8,Word8,Word8) -> SpikeT m ()
 eyesSetLeds port states = ask >>= \s -> R.distSetLED s port states

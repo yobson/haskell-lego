@@ -2,6 +2,7 @@ module Robotics.Spike.LowLevel.IO
 ( motorSetPwm
 , motorRunAtSpeed
 , motorRunToPos
+, motorBrake
 , distSetLED
 , distLEDs
 , distGet
@@ -36,6 +37,12 @@ motorRunAtSpeed s port speed = do
 motorRunToPos :: (MonadIO m, MonadFail m) => SerialPort -> Port -> Int -> Int -> m ()
 motorRunToPos s port pos speed = do
   let com = buildCommand $ PortCom port $ MAction $ RunToPos pos speed
+  liftIO $ send s com
+  chkError com s
+
+motorBrake :: (MonadIO m, MonadFail m) => SerialPort -> Port -> m ()
+motorBrake s port = do
+  let com = buildCommand $ PortCom port $ MAction $ Brake
   liftIO $ send s com
   chkError com s
 

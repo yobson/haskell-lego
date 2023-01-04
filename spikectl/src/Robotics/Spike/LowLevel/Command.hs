@@ -30,6 +30,7 @@ import           Data.Attoparsec.ByteString.Char8
 import           Control.Applicative
 import           Data.Functor
 import           System.Hardware.Serialport
+import Control.Concurrent
 
 
 buildCommand com = B.toStrict $ toLazyByteString $ renderCommand com <> string8 "\r\n"
@@ -69,11 +70,13 @@ renderPortAction (DistAction act) = string8 "device." <> renderDistCommand act
 data MTCommand = SetPWM Int -- ^ Set Speed Raw
                | RunAtSpeed Int
                | RunToPos Int Int -- ^ Angle Speed
+               | Brake
   deriving (Show, Eq)
 
-renderMTCommand (SetPWM val) = string8 "pwm(" <> intDec val <> string8 ")"
-renderMTCommand (RunAtSpeed speed) = string8 "run_at_speed(" <> intDec speed <> string8 ")"
+renderMTCommand (SetPWM val)         = string8 "pwm(" <> intDec val <> string8 ")"
+renderMTCommand (RunAtSpeed speed)   = string8 "run_at_speed(" <> intDec speed <> string8 ")"
 renderMTCommand (RunToPos pos speed) = string8 "run_to_position(" <> intDec pos <> string8 "," <> intDec speed <> string8 ")"
+renderMTCommand Brake                = string8 "brake()"
 
 data DistCommand = DistLED Word8 Word8 Word8 Word8
                  | DistLEDsOn
