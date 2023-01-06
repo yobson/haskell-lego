@@ -7,7 +7,7 @@ This is a monadic wrapper that lets you control the spike prime!
 It works pretty well... sometimes!
 
 It almost never works over bluetooth, but works mostly over USB.
-Sometimes, it gets in an error state on launch, but you just have to re-run your code
+Sometimes, it gets in an error state on launch, but you just have to re-run your code (_should be fixed_)
 
 ## Robo
 A simple yampa program using the spike library above!
@@ -19,7 +19,7 @@ and never gets up to speed! Set by PWM
 ## Plans
 - [X] initial spike library
 - [X] yampa experiment
-- [ ] Fix startup of spike library
+- [X] Fix startup of spike library
 - [ ] Stablise spike library over bluetooth
 - [ ] RPi BuildHAT Library (including firmware upload)
 - [ ] Hackage documentation

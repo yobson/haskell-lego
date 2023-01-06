@@ -1,3 +1,4 @@
 packages:
   spikectl/*.cabal
   robo/*.cabal
+  buildhat/*.cabal

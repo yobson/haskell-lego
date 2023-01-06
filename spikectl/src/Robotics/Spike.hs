@@ -61,8 +61,9 @@ instance (MonadState s m) => MonadState s (SpikeT m) where
 
 runSpike :: (MonadIO m) => SpikeT m a -> P.SerialPort -> m (Either SpikeError a)
 runSpike (SpikeT s) port = do
+  liftIO $ P.recv port 2048
   liftIO $ P.send port "\3"
-  liftIO $ threadDelay (1000000)
+  liftIO $ threadDelay 1500000
   liftIO $ P.recv port 2048
   runExceptT $ runReaderT s port
 
