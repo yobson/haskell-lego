@@ -15,6 +15,11 @@ license-file:       LICENSE
 author:             James Hobson
 maintainer:         j.w.hobson@icloud.com
 
+data-dir: firmware
+data-files: firmware.bin
+            signature.bin
+            version
+
 -- A copyright notice.
 -- copyright:
 -- category:
@@ -24,7 +29,7 @@ library
     exposed-modules:  Robotics.BuildHAT.LowLevel.Commands
 
     -- Modules included in this library but not exported.
-    -- other-modules:
+    other-modules: Paths_buildhat
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

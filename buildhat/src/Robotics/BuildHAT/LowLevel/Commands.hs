@@ -17,14 +17,19 @@ import Control.Monad
 import qualified Data.ByteString.Lazy               as L
 import           Data.ByteString.Builder
 
-send s t = liftIO $ do
-  -- putStrLn "Sending:"
-  -- print t
-  S.send s t
+import Paths_buildhat
 
-recv s l = liftIO $ do
-  res <- S.recv s l
-  return res
+send s t = liftIO $ S.send s t
+
+recv s l = liftIO $ S.recv s l
+
+initialise :: (MonadIO m, MonadFail m) => SerialPort -> m ()
+initialise s = do
+  uploadFirmware s
+  send s "echo 0\r"
+  recv s 1024
+  return ()
+
 
 uploadFirmware :: (MonadIO m, MonadFail m) => SerialPort -> m ()
 uploadFirmware s = do
@@ -36,8 +41,10 @@ uploadFirmware s = do
   liftIO $ threadDelay 250000
   line <- recv s 1024
   when ("version\r\nBuildHAT bootloader" `B.isPrefixOf` line) $ do
-    firmware <-  liftIO $ BS.readFile "/home/james/gits/python-build-hat/buildhat/data/firmware.bin"
-    signature <- liftIO $ BS.readFile "/home/james/gits/python-build-hat/buildhat/data/signature.bin"
+    firmware_path  <- liftIO $ getDataFileName "firmware.bin"
+    signature_path <- liftIO $ getDataFileName "signature.bin"
+    firmware <-  liftIO $ BS.readFile firmware_path
+    signature <- liftIO $ BS.readFile signature_path
     send s $ loadCom (BS.length firmware) (checksum firmware)
     liftIO $ threadDelay 100000
     send s "\STX"
