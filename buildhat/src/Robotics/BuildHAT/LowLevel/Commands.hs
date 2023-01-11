@@ -83,8 +83,8 @@ data PidParams  = PidParams
   , windup   :: !Float  -- ^ integral windup limit
   } deriving (Show)
 
-data Format = Format Bool -- ^ Signed?
-                     BLen -- ^ Number of Bytes
+data Format = Format !Bool -- ^ Signed?
+                     !BLen -- ^ Number of Bytes
   deriving Show
 
 -- | Size (in bytes) of a number
@@ -94,8 +94,8 @@ data BLen = B1 -- ^ 1 byte
   deriving Show
 
 
-data SetPoint = Val Float -- ^ Floating point constant
-              | WaveForm Wave -- ^ Waveform
+data SetPoint = Val !Float -- ^ Floating point constant
+              | WaveForm !Wave -- ^ Waveform
           deriving (Show)
 
 data Wave = Square  -- ^ Square Wave
@@ -124,11 +124,11 @@ data Wave = Square  -- ^ Square Wave
           deriving (Show)
 
 data SelMode = Sel 
-                Int -- ^ Mode
+                !Int -- ^ Mode
              | SelOff 
-                Int    -- ^ Mode
-                Int    -- ^ Offset
-                Format -- ^ Format
+                !Int    -- ^ Mode
+                !Int    -- ^ Offset
+                !Format -- ^ Format
           deriving (Show)
 
 data LedMode = LedV -- ^ LEDs lit depend on the voltage on the input power jack
