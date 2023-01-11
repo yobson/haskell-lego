@@ -105,8 +105,8 @@ render (Select s)    = return $ string8 "select " <> renderSel s
 render (Selonce s)   = return $ string8 "selonce " <> renderSel s
 render (Combi m lst) = return $ string8 "combi " <> intDec m <> mconcat (map list lst)
   where list (x,y) = char8 ' ' <> intDec x <> char8 ' '  <> intDec y
-render (Write1 bs)   = return $ string8 "write " <> mapSep (char8 ' ') word8HexFixed bs
-render (Write2 bs)   = return $ string8 "write " <> mapSep (char8 ' ') word8HexFixed bs
+render (Write1 bs)   = return $ string8 "write1 " <> mapSep (char8 ' ') word8HexFixed bs
+render (Write2 bs)   = return $ string8 "write2 " <> mapSep (char8 ' ') word8HexFixed bs
 render (e1 :> e2)    = liftA2 (\x y -> x <> string8 " ; " <> y) (render e1) (render e2)
 
 renderPid :: PidParams -> Builder
