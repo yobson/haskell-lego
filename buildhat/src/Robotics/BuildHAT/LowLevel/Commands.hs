@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 
 module Robotics.BuildHAT.LowLevel.Commands
 ( initialise
@@ -25,41 +25,49 @@ send s t = liftIO $ S.send s t
 
 recv s l = liftIO $ S.recv s l
 
-data Expr = Echo Bool
+data Expr = Echo !Bool
           | Version
-          | Port Int
+          | Port !Int
           | Vin
-          | LedMode Int
+          | LedMode !Int
           | List
           | ClearFaults
           | Coast
           | Pwm
           | On
           | Off
-          | Pid PidParam
-          | Set SetPoint
-          | Bias Float
-          | PLimit Float
-          | Select (Maybe SelMode)
-          | Selonce (Maybe SelMode)
-          | Combi Int [(Int,Int)]
-          | Write1 BS.ByteString
-          | Write2 BS.ByteString
-          | Expr :> Expr
+          | Pid !PidParams
+          | Set !SetPoint
+          | Bias !Float
+          | PLimit !Float
+          | Select !(Maybe SelMode)
+          | Selonce !(Maybe SelMode)
+          | Combi !Int [(Int,Int)]
+          | Write1 ![Word8]
+          | Write2 ![Word8]
+          | !Expr :> !Expr
           deriving (Show)
 infixr 5 :>
 
-data PidParam = Pvport
-              | Pvmode
-              | Pvoffset
-              | Pvformat
-              | Pvscale
-              | Pvunwrap
-              | Kp
-              | Ki
-              | Kd
-              | Windup
-          deriving (Show)
+data PidParams  = PidParams
+  { pvport   :: !Int
+  , pvmode   :: !Int
+  , pvoffset :: !Int
+  , pvformat :: !Format
+  , pvscale  :: !Float
+  , pvunwrap :: !Int
+  , kp       :: !Float
+  , ki       :: !Float
+  , kd       :: !Float
+  , windup   :: !Float
+  } deriving (Show)
+
+data Format = Format Bool -- ^ Signed?
+                     BLen -- ^ Number of Bytes
+  deriving Show
+
+data BLen = B1 | B2 | B4
+  deriving Show
 
 data SetPoint = Val Float | WaveForm Wave
           deriving (Show)
@@ -71,7 +79,7 @@ data Wave = Square   Float Float Float Float
           | Ramp     Float Float Float
           deriving (Show)
 
-data SelMode = Sel Int | SelOff Int Int
+data SelMode = Sel Int | SelOff Int Format
           deriving (Show)
 
 render :: (MonadFail m) => Expr -> m Builder
@@ -95,14 +103,46 @@ render (Bias b)      = return $ string8 "bias " <> floatDec b
 render (PLimit l)    = return $ string8 "plimit " <> floatDec l
 render (Select s)    = return $ string8 "select " <> renderSel s
 render (Selonce s)   = return $ string8 "selonce " <> renderSel s
-render (Combi m lst) = fail "Not Implemented"
-render (Write1 bs)   = return $ string8 "write " <> byteStringHex bs
-render (Write2 bs)   = return $ string8 "write " <> byteStringHex bs
+render (Combi m lst) = return $ string8 "combi " <> intDec m <> mconcat (map list lst)
+  where list (x,y) = char8 ' ' <> intDec x <> char8 ' '  <> intDec y
+render (Write1 bs)   = return $ string8 "write " <> mapSep (char8 ' ') word8HexFixed bs
+render (Write2 bs)   = return $ string8 "write " <> mapSep (char8 ' ') word8HexFixed bs
 render (e1 :> e2)    = liftA2 (\x y -> x <> string8 " ; " <> y) (render e1) (render e2)
 
-renderPid = undefined
-renderSet = undefined
-renderSel = undefined
+renderPid :: PidParams -> Builder
+renderPid (PidParams {..}) = mapSep (char8 ' ') id
+                                [ intDec pvport
+                                , intDec pvmode
+                                , renderFormat pvformat
+                                , floatDec pvscale
+                                , intDec pvunwrap
+                                , floatDec kp
+                                , floatDec ki
+                                , floatDec kd
+                                , floatDec windup
+                                ]
+
+renderSet (Val f) = floatDec f
+renderSet (WaveForm w) = renderWave w
+
+renderWave (Square   a b c d) = string8 "square "   <> mapSep (char8 ' ') floatDec [a,b,c,d]
+renderWave (Sine     a b c d) = string8 "sine "     <> mapSep (char8 ' ') floatDec [a,b,c,d]
+renderWave (Triangle a b c d) = string8 "triangle " <> mapSep (char8 ' ') floatDec [a,b,c,d]
+renderWave (Pulse    a b c)   = string8 "pulse "    <> mapSep (char8 ' ') floatDec [a,b,c,0]
+renderWave (Ramp     a b c)   = string8 "ramp "     <> mapSep (char8 ' ') floatDec [a,b,c,0]
+
+renderSel Nothing             = mempty
+renderSel (Just (SelOff i f)) = intDec i <> char8 ' ' <> renderFormat f
+
+renderFormat (Format True  b) = char8 's' <> renderByteLen b 
+renderFormat (Format False b) = char8 'u' <> renderByteLen b
+
+renderByteLen B1 = char8 '1'
+renderByteLen B2 = char8 '2'
+renderByteLen B4 = char8 '4'
+
+mapSep :: Builder -> (a -> Builder) -> [a] -> Builder
+mapSep sep build = foldr1 (\x xs -> x <> sep <> xs) . map build
 
 initialise :: (MonadIO m, MonadFail m) => SerialPort -> m ()
 initialise s = do
