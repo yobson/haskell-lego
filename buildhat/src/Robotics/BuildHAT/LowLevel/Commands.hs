@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Robotics.BuildHAT.LowLevel.Commands
-( uploadFirmware
+( initialise
+, uploadFirmware
 ) where
 
 
@@ -16,12 +17,92 @@ import Data.Bits
 import Control.Monad
 import qualified Data.ByteString.Lazy               as L
 import           Data.ByteString.Builder
+import Control.Applicative
 
 import Paths_buildhat
 
 send s t = liftIO $ S.send s t
 
 recv s l = liftIO $ S.recv s l
+
+data Expr = Echo Bool
+          | Version
+          | Port Int
+          | Vin
+          | LedMode Int
+          | List
+          | ClearFaults
+          | Coast
+          | Pwm
+          | On
+          | Off
+          | Pid PidParam
+          | Set SetPoint
+          | Bias Float
+          | PLimit Float
+          | Select (Maybe SelMode)
+          | Selonce (Maybe SelMode)
+          | Combi Int [(Int,Int)]
+          | Write1 BS.ByteString
+          | Write2 BS.ByteString
+          | Expr :> Expr
+          deriving (Show)
+infixr 5 :>
+
+data PidParam = Pvport
+              | Pvmode
+              | Pvoffset
+              | Pvformat
+              | Pvscale
+              | Pvunwrap
+              | Kp
+              | Ki
+              | Kd
+              | Windup
+          deriving (Show)
+
+data SetPoint = Val Float | WaveForm Wave
+          deriving (Show)
+
+data Wave = Square   Float Float Float Float
+          | Sine     Float Float Float Float
+          | Triangle Float Float Float Float
+          | Pulse    Float Float Float
+          | Ramp     Float Float Float
+          deriving (Show)
+
+data SelMode = Sel Int | SelOff Int Int
+          deriving (Show)
+
+render :: (MonadFail m) => Expr -> m Builder
+render (Echo True)   = return $ string8 "echo 1"
+render (Echo False)  = return $ string8 "echo 0"
+render Version       = return $ string8 "version"
+render (Port p)      | p < 0 || p > 3 = fail "Port out of range [0,3]"
+                     | otherwise      = return $ string8 "port " <> intDec p
+render Vin           = return $ string8 "vin"
+render (LedMode m)   | m < (-1) || m > 3 = fail "LedMode out of range [-1,3]"
+                     | otherwise         = return $ string8 "ledmode " <> intDec m
+render List          = return $ string8 "list"
+render ClearFaults   = return $ string8 "clear_faults"
+render Coast         = return $ string8 "Coast" 
+render Pwm           = return $ string8 "pwm"
+render Off           = return $ string8 "off"
+render On            = return $ string8 "on"
+render (Pid params)  = return $ string8 "pid " <> renderPid params
+render (Set point)   = return $ string8 "set " <> renderSet point
+render (Bias b)      = return $ string8 "bias " <> floatDec b
+render (PLimit l)    = return $ string8 "plimit " <> floatDec l
+render (Select s)    = return $ string8 "select " <> renderSel s
+render (Selonce s)   = return $ string8 "selonce " <> renderSel s
+render (Combi m lst) = fail "Not Implemented"
+render (Write1 bs)   = return $ string8 "write " <> byteStringHex bs
+render (Write2 bs)   = return $ string8 "write " <> byteStringHex bs
+render (e1 :> e2)    = liftA2 (\x y -> x <> string8 " ; " <> y) (render e1) (render e2)
+
+renderPid = undefined
+renderSet = undefined
+renderSel = undefined
 
 initialise :: (MonadIO m, MonadFail m) => SerialPort -> m ()
 initialise s = do
