@@ -16,6 +16,12 @@ We warned, setting a motor to a speed doesn't work with yampa alone!
 This is because yampa calls it on every iteration. This means that the motor restarts
 and never gets up to speed! Set by PWM
 
+## Docs
+Given that this isn't on hackage, there are currently no docs.
+You can find the docs (for now) here:
+- [`spikectl`](https://docs.hobson.space/spikectl/)
+- [`buildhat`](https://docs.hobson.space/buildhat/)
+
 ## Plans
 - [X] initial spike library
 - [X] yampa experiment
