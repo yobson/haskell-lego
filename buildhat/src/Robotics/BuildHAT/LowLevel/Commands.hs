@@ -19,6 +19,8 @@ module Robotics.BuildHAT.LowLevel.Commands
 , SelMode(..)
 , LedMode(..)
 , Port(..)
+, send
+, recv
 ) where
 
 
@@ -162,8 +164,8 @@ render Off           =  string8 "off"
 render On            =  string8 "on"
 render (Pid params)  =  string8 "pid " <> renderPid params
 render (Set point)   =  string8 "set " <> renderSet point
-render (Bias b)      =  string8 "bias " <> floatDec b
-render (PLimit l)    =  string8 "plimit " <> floatDec l
+render (Bias b)      =  string8 "bias " <> formatFloat (standard 5) b
+render (PLimit l)    =  string8 "plimit " <> formatFloat (standard 5) l
 render (Select s)    =  string8 "select " <> renderSel s
 render (Selonce s)   =  string8 "selonce " <> renderSel s
 render (Combi m lst) =  string8 "combi " <> intDec m <> mconcat (map list lst)
@@ -188,22 +190,22 @@ renderPid (PidParams {..}) = mapSep (char8 ' ') id
                                 [ renderPort pvport
                                 , intDec pvmode
                                 , renderFormat pvformat
-                                , floatDec pvscale
+                                , formatFloat (standard 5) pvscale
                                 , intDec pvunwrap
-                                , floatDec kp
-                                , floatDec ki
-                                , floatDec kd
-                                , floatDec windup
+                                , formatFloat (standard 5) kp
+                                , formatFloat (standard 5) ki
+                                , formatFloat (standard 5) kd
+                                , formatFloat (standard 5) windup
                                 ]
 
-renderSet (Val f) = floatDec f
+renderSet (Val f) = formatFloat (standard 5) f
 renderSet (WaveForm w) = renderWave w
 
-renderWave (Square   a b c d) = string8 "square "   <> mapSep (char8 ' ') floatDec [a,b,c,d]
-renderWave (Sine     a b c d) = string8 "sine "     <> mapSep (char8 ' ') floatDec [a,b,c,d]
-renderWave (Triangle a b c d) = string8 "triangle " <> mapSep (char8 ' ') floatDec [a,b,c,d]
-renderWave (Pulse    a b c)   = string8 "pulse "    <> mapSep (char8 ' ') floatDec [a,b,c,0]
-renderWave (Ramp     a b c)   = string8 "ramp "     <> mapSep (char8 ' ') floatDec [a,b,c,0]
+renderWave (Square   a b c d) = string8 "square "   <> mapSep (char8 ' ') (formatFloat (standard 5)) [a,b,c,d]
+renderWave (Sine     a b c d) = string8 "sine "     <> mapSep (char8 ' ') (formatFloat (standard 5)) [a,b,c,d]
+renderWave (Triangle a b c d) = string8 "triangle " <> mapSep (char8 ' ') (formatFloat (standard 5)) [a,b,c,d]
+renderWave (Pulse    a b c)   = string8 "pulse "    <> mapSep (char8 ' ') (formatFloat (standard 5)) [a,b,c,0]
+renderWave (Ramp     a b c)   = string8 "ramp "     <> mapSep (char8 ' ') (formatFloat (standard 5)) [a,b,c,0]
 
 renderSel Nothing             = mempty
 renderSel (Just (SelOff i o f)) = intDec i <> char8 ' ' <> intDec o <> char8 ' ' <> renderFormat f
@@ -231,6 +233,7 @@ initialise s = do
     uploadFirmware s
   send s "echo 0\r"
   recv s 1024
+  send s $ command $ PLimit 0.7 :> Bias 0.3
   return ()
 
 -- | Upload firmware if needed
